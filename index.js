@@ -1,35 +1,13 @@
+// index.js
 require('dotenv').config();
-const express = require('express');
-const {
-  Client,
-  GatewayIntentBits,
-  REST,
-  Routes,
-  SlashCommandBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { fork } = require('child_process');
 
 // Discord-Bot Konfiguration
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-// Webserver Setup
-const app = express();
-const PORT = process.env.PORT || 10000;
-
-// Keep-Alive Route
-app.get('/keep_alive', (req, res) => {
-  res.status(200).send('Bot ist online!');
-});
-
-// Webserver starten
-app.listen(PORT, () => {
-  console.log(`Webserver läuft auf http://localhost:${PORT}`);
-});
 
 // Slash Commands
 const commands = [
@@ -40,16 +18,10 @@ const commands = [
       .setName('reactionroles')
       .setDescription('Erstellt eine Nachricht mit Rollen-Buttons.')
       .addStringOption((option) =>
-          option
-              .setName('roles')
-              .setDescription('Liste von markierten Rollen, z.B. @Rolle1 @Rolle2')
-              .setRequired(true),
+          option.setName('roles').setDescription('Liste von markierten Rollen, z.B. @Rolle1 @Rolle2').setRequired(true),
       )
       .addStringOption((option) =>
-          option
-              .setName('emojis')
-              .setDescription('Liste von Emojis für die Rollen, z.B. :emoji1: :emoji2:')
-              .setRequired(true),
+          option.setName('emojis').setDescription('Liste von Emojis für die Rollen, z.B. :emoji1: :emoji2:').setRequired(true),
       ),
 ].map((command) => command.toJSON());
 
@@ -156,3 +128,6 @@ client.on('interactionCreate', async (interaction) => {
 
 // Bot starten
 client.login(token);
+
+// Starte den Webserver in einem separaten Prozess
+fork('./server.js');
