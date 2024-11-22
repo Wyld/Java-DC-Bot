@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
-const keepAlive = require('./keep_alive'); // Funktion importieren
+const { keepAlive } = require('./keep_alive');
 const { runFlask } = require('./flask_app');
 const setDiscordPresence = require('./discord_presence'); // Importiere die Funktion
 
@@ -111,7 +111,7 @@ client.on('interactionCreate', async interaction => {
 
 // Starten des Bots und der Flask-App
 (async () => {
-  keepAlive(); // Keep-alive starten
-  runFlask(); // Flask starten
+  keepAlive(); // Keep-Alive-Server
+  runFlask();  // Flask-Server
   client.login(token); // Bot starten
 })();

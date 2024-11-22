@@ -1,16 +1,15 @@
-const http = require('http');
+const express = require('express');
 
-// Server zum "am Leben halten" des Bots
-function keepAlive() {
-    const server = http.createServer((req, res) => {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('Bot is alive!\n');
-    });
+const app = express();
 
-    const PORT = process.env.PORT || 10000; // Default-Port 10000
-    server.listen(PORT, () => {
-        console.log(`Keep-alive server läuft auf Port ${PORT}`);
+app.get('/', (req, res) => res.send('Keep-Alive aktiv!'));
+
+// Flask-kompatiblen Server starten
+function runKeepAlive() {
+    const PORT = process.env.PORT || 7000;
+    app.listen(PORT, () => {
+        console.log(`Keep-alive läuft auf Port ${PORT}`);
     });
 }
 
-module.exports = keepAlive; // Funktion exportieren
+module.exports = runKeepAlive;
