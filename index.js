@@ -1,7 +1,7 @@
-// index.js
 require('dotenv').config();
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { fork } = require('child_process');
+const RPC = require('discord-rpc'); // Discord RPC Bibliothek importieren
 
 // Discord-Bot Konfiguration
 const token = process.env.DISCORD_TOKEN;
@@ -9,7 +9,12 @@ const clientId = process.env.CLIENT_ID;
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// Slash Commands
+// Erstelle eine Instanz von RichPresence
+const rpc = new RPC.Client({ transport: 'ipc' });
+
+const clientIdForRPC = process.env.CLIENT_ID; // Discord Application Client ID
+
+// Slash Commands definieren
 const commands = [
   new SlashCommandBuilder()
       .setName('ping')
@@ -27,7 +32,7 @@ const commands = [
 
 const rest = new REST({ version: '10' }).setToken(token);
 
-// Befehle registrieren
+// Slash Commands registrieren
 (async () => {
   try {
     console.log('Befehle registrieren...');
@@ -38,10 +43,41 @@ const rest = new REST({ version: '10' }).setToken(token);
   }
 })();
 
-// Bot-Status setzen
+// Bot-Status setzen (Discord.js Präsenz)
 client.once('ready', () => {
   console.log(`Eingeloggt als ${client.user.tag}`);
-  client.user.setActivity('wie jemand mit Feelings spielt', { type: 'WATCHING' });
+
+  client.user.setPresence({
+    activities: [
+      {
+        name: 'People play with Feelings', // Aktivitätsname
+        type: 'WATCHING', // Typ der Aktivität
+      },
+    ],
+    status: 'online', // Status des Bots
+  });
+  console.log("Discord.js Präsenz gesetzt.");
+
+  // Rich Presence (discord-rpc)
+  rpc.once('ready', () => {
+    console.log('Rich Presence aktiviert!');
+    rpc.setActivity({
+      details: 'Watching People play with Feelings',
+      state: 'Competitive',
+      startTimestamp: new Date(),
+      endTimestamp: new Date().setMinutes(new Date().getMinutes() + 30),
+      largeImageKey: 'game_icon',
+      largeImageText: 'Mein Spiel',
+      smallImageKey: 'level_up',
+      smallImageText: 'Level 100',
+      partyId: 'ae488379-351d-4a4f-ad32-2b9b01c91657',
+      partySize: 1,
+      partyMax: 5,
+      joinSecret: 'MTI4NzM0OjFpMmhuZToxMjMxMjM=',
+    });
+  });
+
+  rpc.login({ clientId: clientIdForRPC }).catch(console.error);
 });
 
 // Emoji-Validierungsfunktion
@@ -51,83 +87,78 @@ const isValidEmoji = (emoji) => {
   return unicodeEmojiRegex.test(emoji) || discordEmojiRegex.test(emoji);
 };
 
-// Interaktionen behandeln
+// Interaktionen: Slash Commands und Reaction Role-Buttons
 client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isCommand()) return;
+  if (interaction.isCommand()) {
+    if (interaction.commandName === 'reactionroles') {
+      const roles = interaction.options.getString('roles').split(' ');
+      const emojis = interaction.options.getString('emojis').split(' ');
 
-  if (interaction.commandName === 'reactionroles') {
-    const roles = interaction.options.getString('roles').split(' ');
-    const emojis = interaction.options.getString('emojis').split(' ');
-
-    if (roles.length !== emojis.length) {
-      return interaction.reply({
-        content: 'Die Anzahl der Rollen und Emojis muss übereinstimmen!',
-        ephemeral: true,
-      });
-    }
-
-    const rows = [];
-    for (let i = 0; i < roles.length; i++) {
-      const roleId = roles[i].replace(/[<@&>]/g, '');
-      const emojiInput = emojis[i];
-      const roleName = interaction.guild.roles.cache.get(roleId)?.name || 'Unbekannte Rolle';
-
-      // Emoji-Validierung
-      if (!isValidEmoji(emojiInput)) {
+      if (roles.length !== emojis.length) {
         return interaction.reply({
-          content: `Das Emoji ${emojiInput} ist ungültig oder nicht unterstützt!`,
+          content: 'Die Anzahl der Rollen und Emojis muss übereinstimmen!',
           ephemeral: true,
         });
       }
 
-      const button = new ButtonBuilder()
-          .setCustomId(`reactionrole_${roleId}`)
-          .setLabel(roleName)
-          .setEmoji(emojiInput) // Emoji hinzufügen
-          .setStyle(ButtonStyle.Primary);
+      const rows = [];
+      for (let i = 0; i < roles.length; i++) {
+        const roleId = roles[i].replace(/[<@&>]/g, '');
+        const emojiInput = emojis[i];
+        const roleName = interaction.guild.roles.cache.get(roleId)?.name || 'Unbekannte Rolle';
 
-      if (rows.length === 0 || rows[rows.length - 1].components.length === 5) {
-        rows.push(new ActionRowBuilder());
+        if (!isValidEmoji(emojiInput)) {
+          return interaction.reply({
+            content: `Das Emoji ${emojiInput} ist ungültig oder nicht unterstützt!`,
+            ephemeral: true,
+          });
+        }
+
+        const button = new ButtonBuilder()
+            .setCustomId(`reactionrole_${roleId}`)
+            .setLabel(roleName)
+            .setEmoji(emojiInput)
+            .setStyle(ButtonStyle.Primary);
+
+        if (rows.length === 0 || rows[rows.length - 1].components.length === 5) {
+          rows.push(new ActionRowBuilder());
+        }
+        rows[rows.length - 1].addComponents(button);
       }
-      rows[rows.length - 1].addComponents(button);
+
+      await interaction.reply({
+        content: 'Klicke auf die Buttons, um Rollen hinzuzufügen oder zu entfernen.',
+        components: rows,
+      });
+    }
+  } else if (interaction.isButton()) {
+    const roleId = interaction.customId.split('_')[1];
+    const role = interaction.guild.roles.cache.get(roleId);
+
+    if (!role) {
+      return interaction.reply({ content: 'Diese Rolle existiert nicht!', ephemeral: true });
     }
 
-    await interaction.reply({
-      content: 'Klicke auf die Buttons, um Rollen hinzuzufügen oder zu entfernen.',
-      components: rows,
-    });
-  }
-});
+    const member = interaction.guild.members.cache.get(interaction.user.id);
 
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isButton()) return;
-
-  const roleId = interaction.customId.split('_')[1];
-  const role = interaction.guild.roles.cache.get(roleId);
-
-  if (!role) {
-    return interaction.reply({ content: 'Diese Rolle existiert nicht!', ephemeral: true });
-  }
-
-  const member = interaction.guild.members.cache.get(interaction.user.id);
-
-  if (member.roles.cache.has(roleId)) {
-    await member.roles.remove(roleId);
-    return interaction.reply({
-      content: `Die Rolle **${role.name}** wurde entfernt.`,
-      ephemeral: true,
-    });
-  } else {
-    await member.roles.add(roleId);
-    return interaction.reply({
-      content: `Die Rolle **${role.name}** wurde hinzugefügt.`,
-      ephemeral: true,
-    });
+    if (member.roles.cache.has(roleId)) {
+      await member.roles.remove(roleId);
+      return interaction.reply({
+        content: `Die Rolle **${role.name}** wurde entfernt.`,
+        ephemeral: true,
+      });
+    } else {
+      await member.roles.add(roleId);
+      return interaction.reply({
+        content: `Die Rolle **${role.name}** wurde hinzugefügt.`,
+        ephemeral: true,
+      });
+    }
   }
 });
 
 // Bot starten
 client.login(token);
 
-// Starte den Webserver in einem separaten Prozess
+// Webserver in separatem Prozess starten
 fork('./server.js');
