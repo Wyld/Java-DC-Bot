@@ -1,9 +1,8 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 const { keepAlive } = require('./keep_alive');
-const { runFlask } = require('./flask_app');
-const setDiscordPresence = require('./discord_presence'); // Importiere die Funktion
-
+const { runFlask } = require('./flask_app'); // Flask-Webserver
+const setDiscordPresence = require('./discord_presence'); // Präsenz setzen
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
 
@@ -36,8 +35,8 @@ const rest = new REST({ version: '10' }).setToken(token);
 
 // Nutzung der Funktion
 client.once('ready', async () => {
-  console.log(`Eingeloggt als ${client.user.tag}`);
-  await setDiscordPresence(client); // Starte Rich Presence
+  console.log(`Bot ${client.user.tag} ist online.`);
+  await setDiscordPresence(client); // Discord-Präsenz setzen
 });
 
 // Helper: Emoji-Validierung
@@ -109,9 +108,8 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// Starten des Bots und der Flask-App
-(async () => {
-  keepAlive(); // Keep-Alive-Server
-  runFlask();  // Flask-Server
-  client.login(token); // Bot starten
-})();
+// Discord-Bot starten
+client.login(process.env.DISCORD_TOKEN);
+
+// Flask-Webserver starten
+runFlask();
