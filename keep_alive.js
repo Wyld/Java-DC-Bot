@@ -1,21 +1,16 @@
-const express = require('express');
-const { Thread } = require('worker_threads');
+const http = require('http');
 
-const app = express();
-
-app.get('/', (req, res) => {
-    res.status(200).send('Bot läuft!');
-});
-
-// Keep-Alive-Webserver starten
+// Server zum "am Leben halten" des Bots
 function keepAlive() {
-    const server = new Thread(() => {
-        app.listen(10000, () => {
-            console.log('Keep-Alive-Server läuft auf http://localhost:10000');
-        });
+    const server = http.createServer((req, res) => {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Bot is alive!\n');
     });
 
-    server.start();
+    const PORT = process.env.PORT || 7000; // Default-Port 7000
+    server.listen(PORT, () => {
+        console.log(`Keep-alive server läuft auf Port ${PORT}`);
+    });
 }
 
-module.exports = { keepAlive };
+module.exports = keepAlive; // Funktion exportieren
