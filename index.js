@@ -111,5 +111,3 @@ client.on('interactionCreate', async interaction => {
 // Discord-Bot starten
 client.login(process.env.DISCORD_TOKEN);
 
-// Flask-Webserver starten
-runFlask();
