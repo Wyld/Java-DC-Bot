@@ -29,7 +29,6 @@ jobs:
       # 4. Starten von flask_app.js und index.js
       - name: Start Discord Bot Services
         run: |
-          pm2 kill # Stelle sicher, dass keine vorherigen Instanzen laufen
           pm2 start index.js --name "discord-bot"
           pm2 save
 
