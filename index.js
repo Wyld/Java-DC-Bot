@@ -1,4 +1,5 @@
 require('dotenv').config();
+const express = require('express');
 const {
   Client,
   GatewayIntentBits,
@@ -10,11 +11,27 @@ const {
   ButtonStyle,
 } = require('discord.js');
 
+// Discord-Bot Konfiguration
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
+// Webserver Setup
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+// Keep-Alive Route
+app.get('/keep_alive', (req, res) => {
+  res.status(200).send('Bot ist online!');
+});
+
+// Webserver starten
+app.listen(PORT, () => {
+  console.log(`Webserver läuft auf http://localhost:${PORT}`);
+});
+
+// Slash Commands
 const commands = [
   new SlashCommandBuilder()
       .setName('ping')
@@ -49,19 +66,20 @@ const rest = new REST({ version: '10' }).setToken(token);
   }
 })();
 
+// Bot-Status setzen
 client.once('ready', () => {
   console.log(`Eingeloggt als ${client.user.tag}`);
+  client.user.setActivity('wie jemand mit Feelings spielt', { type: 'WATCHING' });
 });
-
 
 // Emoji-Validierungsfunktion
 const isValidEmoji = (emoji) => {
-  // Unterstützt Unicode- und benutzerdefinierte Discord-Emojis
   const unicodeEmojiRegex = /^[\p{Extended_Pictographic}]+$/u; // Unicode-Emojis
   const discordEmojiRegex = /^<a?:\w+:\d+>$/; // Discord-Custom-Emojis
   return unicodeEmojiRegex.test(emoji) || discordEmojiRegex.test(emoji);
 };
 
+// Interaktionen behandeln
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isCommand()) return;
 
@@ -109,7 +127,6 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton()) return;
 
@@ -137,4 +154,5 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// Bot starten
 client.login(token);
