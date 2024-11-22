@@ -1,24 +1,16 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { fork } = require('child_process');
-const RPC = require('discord-rpc'); // Discord RPC Bibliothek importieren
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { keepAlive } = require('./keep_alive');
+const { runFlask } = require('./flask_app');
+const { setDiscordPresence } = require('./discord_presence');
 
-// Discord-Bot Konfiguration
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// Erstelle eine Instanz von RichPresence
-const rpc = new RPC.Client({ transport: 'ipc' });
-
-const clientIdForRPC = process.env.CLIENT_ID; // Discord Application Client ID
-
-// Slash Commands definieren
 const commands = [
-  new SlashCommandBuilder()
-      .setName('ping')
-      .setDescription('Antwortet mit Pong!'),
+  new SlashCommandBuilder().setName('ping').setDescription('Antwortet mit Pong!'),
   new SlashCommandBuilder()
       .setName('reactionroles')
       .setDescription('Erstellt eine Nachricht mit Rollen-Buttons.')
@@ -32,7 +24,7 @@ const commands = [
 
 const rest = new REST({ version: '10' }).setToken(token);
 
-// Slash Commands registrieren
+// Befehle registrieren
 (async () => {
   try {
     console.log('Befehle registrieren...');
@@ -43,51 +35,19 @@ const rest = new REST({ version: '10' }).setToken(token);
   }
 })();
 
-// Bot-Status setzen (Discord.js Präsenz)
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`Eingeloggt als ${client.user.tag}`);
-
-  client.user.setPresence({
-    activities: [
-      {
-        name: 'People play with Feelings', // Aktivitätsname
-        type: 'WATCHING', // Typ der Aktivität
-      },
-    ],
-    status: 'online', // Status des Bots
-  });
-  console.log("Discord.js Präsenz gesetzt.");
-
-  // Rich Presence (discord-rpc)
-  rpc.once('ready', () => {
-    console.log('Rich Presence aktiviert!');
-    rpc.setActivity({
-      details: 'Watching People play with Feelings',
-      state: 'Competitive',
-      startTimestamp: new Date(),
-      endTimestamp: new Date().setMinutes(new Date().getMinutes() + 30),
-      largeImageKey: 'game_icon',
-      largeImageText: 'Mein Spiel',
-      smallImageKey: 'level_up',
-      smallImageText: 'Level 100',
-      partyId: 'ae488379-351d-4a4f-ad32-2b9b01c91657',
-      partySize: 1,
-      partyMax: 5,
-      joinSecret: 'MTI4NzM0OjFpMmhuZToxMjMxMjM=',
-    });
-  });
-
-  rpc.login({ clientId: clientIdForRPC }).catch(console.error);
+  await setDiscordPresence(client);
 });
 
-// Emoji-Validierungsfunktion
+// Helper-Funktion: Emoji-Validierung
 const isValidEmoji = (emoji) => {
   const unicodeEmojiRegex = /^[\p{Extended_Pictographic}]+$/u; // Unicode-Emojis
   const discordEmojiRegex = /^<a?:\w+:\d+>$/; // Discord-Custom-Emojis
   return unicodeEmojiRegex.test(emoji) || discordEmojiRegex.test(emoji);
 };
 
-// Interaktionen: Slash Commands und Reaction Role-Buttons
+// Interaktionen (Slash Commands & Buttons)
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isCommand()) {
     if (interaction.commandName === 'reactionroles') {
@@ -157,8 +117,9 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// Bot starten
-client.login(token);
-
-// Webserver in separatem Prozess starten
-fork('./server.js');
+// Bot und Flask parallel ausführen
+(async () => {
+  keepAlive();
+  runFlask();
+  client.login(token);
+})();
