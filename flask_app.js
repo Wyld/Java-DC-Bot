@@ -3,15 +3,21 @@ require('dotenv').config();
 
 const app = express();
 
+// Root-Endpoint für Healthchecks
 app.get('/', (req, res) => res.send('Der Bot läuft!'));
+
+// Keep-Alive-Endpoint (optional)
 app.get('/keep_alive', (req, res) => res.send('Keep-alive aktiv!'));
 
-const PORT = process.env.PORT || 11000;
-
-function runFlask() {
-    app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Flask-Webserver läuft auf Port ${PORT}`);
-    });
+// Port aus Umgebungsvariablen (Render erfordert dies)
+const PORT = process.env.PORT;
+if (!PORT) {
+    throw new Error('PORT environment variable not set!');
 }
 
-module.exports = { runFlask };
+// Server starten und auf allen IPs lauschen
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Flask-Webserver läuft auf Port ${PORT}`);
+});
+
+
