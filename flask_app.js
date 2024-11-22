@@ -7,7 +7,7 @@ const app = express();
 // OAuth2-Konfiguration
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = 'http://localhost:7000/callback';
+const REDIRECT_URI = 'http://localhost:10000/callback';
 const SCOPE = 'identify email guilds';
 
 // OAuth2-Login-Seite
@@ -56,7 +56,7 @@ app.get('/callback', async (req, res) => {
 // Webserver starten
 function runFlask() {
     app.listen(10001, () => {
-        console.log('Flask-Webserver läuft auf http://localhost:7000');
+        console.log('Flask-Webserver läuft auf http://localhost:10000');
     });
 }
 

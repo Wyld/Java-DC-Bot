@@ -7,7 +7,7 @@ function keepAlive() {
         res.end('Bot is alive!\n');
     });
 
-    const PORT = process.env.PORT || 7000; // Default-Port 7000
+    const PORT = process.env.PORT || 10000; // Default-Port 10000
     server.listen(PORT, () => {
         console.log(`Keep-alive server läuft auf Port ${PORT}`);
     });
