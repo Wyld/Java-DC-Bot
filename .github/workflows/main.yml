@@ -1,0 +1,38 @@
+name: Restart JavaScript Bot
+
+on:
+  schedule:
+    # Neustart alle 6 Stunden
+    - cron: "0 */6 * * *"
+  workflow_dispatch: # Manueller Trigger möglich
+
+jobs:
+  restart-bot:
+    name: Restart Discord Bot
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Repository-Code auschecken
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Setup Node.js Umgebung
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18 # Version des Node.js
+
+      # 3. Installiere Abhängigkeiten
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Starten von flask_app.js und index.js
+      - name: Start Discord Bot Services
+        run: |
+          pm2 kill # Stelle sicher, dass keine vorherigen Instanzen laufen
+          pm2 start index.js --name "discord-bot"
+          pm2 save
+
+      # 5. Optional: Logs anzeigen
+      - name: Show running processes
+        run: pm2 list
