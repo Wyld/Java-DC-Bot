@@ -1,45 +1,43 @@
-name: Restart JavaScript Bot
+name: Restart Discord Bot
 
 on:
   schedule:
-    # Neustart alle 6 Stunden
-    - cron: "0 */6 * * *"
-  workflow_dispatch: # Manueller Trigger möglich
+    - cron: '0 */6 * * *'  # Alle 6 Stunden
+  workflow_dispatch:  # Ermöglicht manuellen Start
 
 jobs:
-  restart-bot:
-    name: Restart Discord Bot
+  run-bot:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout code
+      # 1. Code aus dem Repository auschecken
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Setup Node.js Umgebung
+      # 2. Node.js einrichten
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18 # Node.js version
+          node-version: 18
 
-      # 3. Installiere Abhängigkeiten
+      # 3. Abhängigkeiten installieren
       - name: Install dependencies
         run: npm install
 
-      # 4. Installiere PM2 global
-      - name: Install PM2
+      # 4. PM2 installieren
+      - name: Install PM2 globally
         run: npm install -g pm2
 
-      # 5. Starten des Discord Bots mit PM2
-      - name: Start Discord Bot Services
+      # 5. Discord Bot mit PM2 starten
+      - name: Start Discord Bot with PM2
         run: |
           pm2 start index.js --name "discord-bot"
           pm2 save
 
-      # 6. Setze PM2 für den Autostart bei Neustart des Systems
-      - name: Enable PM2 Autostart
-        run: pm2 startup ubuntu
-
-      # 7. Optional: Zeige laufende Prozesse
+      # 6. Zeige laufende Prozesse
       - name: Show running processes
         run: pm2 list
+
+      # 7. PM2-Logs anzeigen (optional)
+      - name: Show PM2 logs
+        run: pm2 logs discord-bot
