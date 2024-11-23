@@ -1,0 +1,42 @@
+name: Restart JavaScript Discord Bot
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Alle 6 Stunden
+  workflow_dispatch:  # Ermöglicht manuellen Start
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Code aus dem Repository auschecken
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Node.js einrichten
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # Wähle die benötigte Node.js-Version
+
+      # 3. Abhängigkeiten installieren
+      - name: Install dependencies
+        run: |
+          npm install
+
+      # 4. Discord Bot ausführen
+      - name: Run Discord Bot
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          KEEP_ALIVE_PORT: ${{ secrets.KEEP_ALIVE_PORT }}  # Falls benötigt
+        run: |
+          node index.js  # Startet den Discord-Bot (index.js)
+      
+      # 5. Optional: Überprüfung der laufenden Prozesse (z. B. um sicherzustellen, dass der Bot läuft)
+      - name: Verify running processes
+        run: |
+          ps aux | grep node
+          echo "Prozesse überprüft."
