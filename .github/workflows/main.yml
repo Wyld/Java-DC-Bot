@@ -34,16 +34,8 @@ jobs:
           KEEP_ALIVE_PORT: ${{ secrets.KEEP_ALIVE_PORT }}  # Falls benötigt
         run: |
           node index.js  # Startet den Discord-Bot (index.js)
-
-      # 5. Flask Webserver starten (mit Standard-Port, falls kein PORT gesetzt ist)
-      - name: Start Flask Webserver
-        env:
-          PORT: ${{ secrets.PORT || 11000 }}  # Setzt PORT auf 3000, wenn es nicht in den Secrets gesetzt ist
-        run: |
-          node flask_app.js &  # Webserver im Hintergrund starten
-          echo "Flask Webserver gestartet."
-
-      # 6. Optional: Überprüfung der laufenden Prozesse
+      
+      # 5. Optional: Überprüfung der laufenden Prozesse (z. B. um sicherzustellen, dass der Bot läuft)
       - name: Verify running processes
         run: |
           ps aux | grep node
