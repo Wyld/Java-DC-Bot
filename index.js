@@ -8,13 +8,43 @@ const {
   ButtonBuilder,
   ActionRowBuilder,
   ButtonStyle,
+  ChannelType,
 } = require('discord.js');
+const fs = require('fs');
 const setDiscordPresence = require('./discord_presence'); // Präsenz setzen
+const hubs = new Map(); // Speichert die Hub-Einstellungen
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMembers,
+  ],
+});
+
+// Helper: Speichern der Hubs
+const saveHubs = () => {
+  fs.writeFileSync('hubs.json', JSON.stringify(Array.from(hubs.entries()), null, 2));
+};
+
+// Hubs laden
+if (fs.existsSync('hubs.json')) {
+  try {
+    const savedHubs = JSON.parse(fs.readFileSync('hubs.json', 'utf-8'));
+    if (Array.isArray(savedHubs)) {
+      savedHubs.forEach(([guildId, hubData]) => {
+        hubs.set(guildId, hubData);
+      });
+    } else {
+      console.error('Das gespeicherte Format in hubs.json ist ungültig.');
+    }
+  } catch (error) {
+    console.error('Fehler beim Laden von hubs.json:', error);
+  }
+}
 
 // Slash Commands
 const commands = [
@@ -22,21 +52,42 @@ const commands = [
       .setName('ping')
       .setDescription('Zeigt den aktuellen Ping des Bots an.'),
   new SlashCommandBuilder()
-      .setName('reactionroles')
-      .setDescription('Erstellt eine Nachricht mit Rollen-Buttons.')
-      .addStringOption((option) =>
+      .setName('sethub')
+      .setDescription('Legt einen Kanal als Hub für temporäre Sprachkanäle fest.')
+      .addChannelOption(option =>
           option
-              .setName('roles')
-              .setDescription('Liste von markierten Rollen, z.B. @Rolle1 @Rolle2')
-              .setRequired(true)
+              .setName('channel')
+              .setDescription('Wähle den Kanal, der als Hub dienen soll.')
+              .setRequired(true),
       )
-      .addStringOption((option) =>
+      .addStringOption(option =>
           option
-              .setName('emojis')
-              .setDescription('Liste von Emojis für die Rollen, z.B. :emoji1: :emoji2:')
-              .setRequired(true)
+              .setName('privacy')
+              .setDescription('Sichtbarkeit des temporären Kanals (public/private).')
+              .addChoices(
+                  { name: 'Public (sichtbar für alle)', value: 'public' },
+                  { name: 'Private (nur für den User)', value: 'private' },
+              )
+              .setRequired(true),
+      )
+      .addIntegerOption(option =>
+          option
+              .setName('setlimit')
+              .setDescription('Maximale Anzahl der Benutzer im Sprachkanal (1-99).')
+              .setMinValue(1)
+              .setMaxValue(99)
+              .setRequired(true),
       ),
-].map((command) => command.toJSON());
+  new SlashCommandBuilder()
+      .setName('removehub')
+      .setDescription('Löscht einen bestehenden Hub.')
+      .addChannelOption(option =>
+          option
+              .setName('channel')
+              .setDescription('Wähle den Kanal aus, der als Hub gelöscht werden soll.')
+              .setRequired(true),
+      ),
+].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(token);
 
@@ -51,24 +102,18 @@ const rest = new REST({ version: '10' }).setToken(token);
   }
 })();
 
-// Nutzung der Funktion
+// Bot ist bereit
 client.once('ready', async () => {
   console.log(`Bot ${client.user.tag} ist online.`);
   await setDiscordPresence(client); // Discord-Präsenz setzen
 });
 
-// Helper: Emoji-Validierung
-const isValidEmoji = (emoji) => {
-  const unicodeEmojiRegex = /^[\p{Extended_Pictographic}]+$/u;
-  const discordEmojiRegex = /^<a?:\w+:\d+>$/;
-  return unicodeEmojiRegex.test(emoji) || discordEmojiRegex.test(emoji);
-};
-
 // Interaktionen
-client.on('interactionCreate', async (interaction) => {
+client.on('interactionCreate', async interaction => {
   if (interaction.isCommand()) {
+    console.log(`Empfangener Befehl: ${interaction.commandName}`);
+
     if (interaction.commandName === 'ping') {
-      // Ping-Befehl: Latenz anzeigen
       const latency = Date.now() - interaction.createdTimestamp;
       const apiLatency = Math.round(client.ws.ping);
       return interaction.reply({
@@ -77,75 +122,116 @@ client.on('interactionCreate', async (interaction) => {
       });
     }
 
-    if (interaction.commandName === 'reactionroles') {
-      const roles = interaction.options.getString('roles').split(' ');
-      const emojis = interaction.options.getString('emojis').split(' ');
+    if (interaction.commandName === 'sethub') {
+      const channel = interaction.options.getChannel('channel');
+      const privacy = interaction.options.getString('privacy');
+      const limit = interaction.options.getInteger('setlimit');
 
-      if (roles.length !== emojis.length) {
+      if (channel.type !== ChannelType.GuildVoice) {
         return interaction.reply({
-          content: 'Die Anzahl der Rollen und Emojis muss übereinstimmen!',
+          content: 'Der ausgewählte Kanal muss ein Sprachkanal sein!',
           ephemeral: true,
         });
       }
 
-      const rows = [];
-      for (let i = 0; i < roles.length; i++) {
-        const roleId = roles[i].replace(/[<@&>]/g, '');
-        const emojiInput = emojis[i];
-        const role = interaction.guild.roles.cache.get(roleId);
+      const hubData = {
+        hubChannelId: channel.id,
+        privacy,
+        limit,
+      };
 
-        if (!role || !isValidEmoji(emojiInput)) {
-          return interaction.reply({
-            content: `Ungültige Rolle oder Emoji: ${emojiInput}.`,
-            ephemeral: true,
-          });
-        }
+      if (!hubs.has(interaction.guild.id)) {
+        hubs.set(interaction.guild.id, []);
+      }
+      hubs.get(interaction.guild.id).push(hubData);
+      saveHubs();
 
-        const button = new ButtonBuilder()
-            .setCustomId(`reactionrole_${roleId}`)
-            .setLabel(role.name)
-            .setEmoji(emojiInput)
-            .setStyle(ButtonStyle.Primary);
+      return interaction.reply({
+        content: `Hub erfolgreich hinzugefügt:\n**Kanal:** ${channel.name}\n**Privacy:** ${privacy}\n**Limit:** ${limit}`,
+        ephemeral: true,
+      });
+    }
 
-        if (rows.length === 0 || rows[rows.length - 1].components.length === 5) {
-          rows.push(new ActionRowBuilder());
-        }
-        rows[rows.length - 1].addComponents(button);
+    if (interaction.commandName === 'removehub') {
+      const channel = interaction.options.getChannel('channel');
+
+      if (!hubs.has(interaction.guild.id)) {
+        return interaction.reply({
+          content: 'Es gibt keine Hubs auf diesem Server.',
+          ephemeral: true,
+        });
       }
 
-      await interaction.reply({
-        content: 'Klicke auf die Buttons, um Rollen hinzuzufügen oder zu entfernen.',
-        components: rows,
-      });
-    }
-  } else if (interaction.isButton()) {
-    const roleId = interaction.customId.split('_')[1];
-    const role = interaction.guild.roles.cache.get(roleId);
+      const serverHubs = hubs.get(interaction.guild.id);
+      const hubIndex = serverHubs.findIndex(hub => hub.hubChannelId === channel.id);
 
-    if (!role) {
-      return interaction.reply({
-        content: 'Diese Rolle existiert nicht!',
-        ephemeral: true,
-      });
-    }
+      if (hubIndex === -1) {
+        return interaction.reply({
+          content: 'Dieser Kanal ist kein registrierter Hub.',
+          ephemeral: true,
+        });
+      }
 
-    const member = interaction.guild.members.cache.get(interaction.user.id);
+      serverHubs.splice(hubIndex, 1);
 
-    if (member.roles.cache.has(roleId)) {
-      await member.roles.remove(roleId);
+      if (serverHubs.length === 0) {
+        hubs.delete(interaction.guild.id);
+      }
+      saveHubs();
+
       return interaction.reply({
-        content: `Rolle **${role.name}** entfernt.`,
-        ephemeral: true,
-      });
-    } else {
-      await member.roles.add(roleId);
-      return interaction.reply({
-        content: `Rolle **${role.name}** hinzugefügt.`,
+        content: `Hub für Kanal **${channel.name}** wurde erfolgreich entfernt.`,
         ephemeral: true,
       });
     }
   }
 });
 
-// Discord-Bot starten
-client.login(process.env.DISCORD_TOKEN);
+// Sprachkanäle verwalten
+client.on('voiceStateUpdate', async (oldState, newState) => {
+  if (!newState.channel || oldState.channel?.id === newState.channel?.id) return;
+
+  const serverHubs = hubs.get(newState.guild.id);
+  if (!serverHubs) return;
+
+  const hub = serverHubs.find(hub => hub.hubChannelId === newState.channel.id);
+  if (!hub) return;
+
+  const { privacy, limit } = hub;
+  const user = newState.member;
+
+  try {
+    // Debugging: Überprüfen, ob `limit` korrekt ist
+    console.log(`Erstelle einen neuen Kanal mit einem Limit von ${limit} Benutzern`);
+
+    // Erstellen des temporären Kanals
+    const tempChannel = await newState.guild.channels.create({
+      name: `Talk von ${user.displayName}`,
+      type: ChannelType.GuildVoice,
+      parent: newState.channel.parentId,
+      permissionOverwrites: privacy === 'private' ? [
+        { id: newState.guild.id, deny: ['ViewChannel'] }, // Serverweite Sichtbarkeit verweigern
+        { id: user.id, allow: ['ViewChannel', 'Connect'] }, // Dem User alle Rechte geben
+      ] : [], // Keine Einschränkungen bei "Public"
+      userLimit: limit, // Maximale Anzahl Benutzer setzen
+    });
+
+    // Nutzer direkt in den Kanal verschieben
+    await user.voice.setChannel(tempChannel);
+
+    // Überprüfen, ob der Kanal leer ist und löschen
+    const interval = setInterval(async () => {
+      const refreshedChannel = await newState.guild.channels.fetch(tempChannel.id);
+      if (refreshedChannel && refreshedChannel.members.size === 0) {
+        clearInterval(interval);
+        await tempChannel.delete();
+      }
+    }, 30 * 1000);
+
+  } catch (error) {
+    console.error('Fehler beim Erstellen des temporären Kanals:', error);
+  }
+});
+
+
+client.login(token);
