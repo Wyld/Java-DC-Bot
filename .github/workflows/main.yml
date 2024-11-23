@@ -1,36 +1,44 @@
-name: Deploy to Production
+name: Restart JavaScript Bot
 
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: '0 */6 * * *'  # Alle 6 Stunden
+  workflow_dispatch:  # Ermöglicht manuellen Start
 
 jobs:
-  deploy:
+  run-bot:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      # 1. Code aus dem Repository auschecken
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16'
+      # 2. Node.js einrichten
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # Wähle die benötigte Node.js-Version
 
-    - name: Install dependencies
-      run: |
-        npm install
+      # 3. Abhängigkeiten installieren
+      - name: Install dependencies
+        run: |
+          npm install
+    
+      # 6. Discord-Bot starten
+      - name: Start Discord Bot
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          KEEP_ALIVE_PORT: ${{ secrets.KEEP_ALIVE_PORT }}
+        run: |
+          node index.js &
+          echo "Discord Bot gestartet."
 
-    - name: Install PM2 globally
-      run: |
-        npm install pm2 -g
+      # 7. Optional: Überprüfung der laufenden Prozesse (optional für Debugging)
+      - name: Verify running processes
+        run: |
+          ps aux | grep node
+          echo "Prozesse überprüft."
 
-    - name: Set environment variables
-      run: |
-        echo "PORT=${{ secrets.PORT }}" >> $GITHUB_ENV
-        echo "FLASK_APP_PORT=${{ secrets.FLASK_APP_PORT }}" >> $GITHUB_ENV
-
-    - name: Start PM2 application
-      run: |
-        pm2 start ecosystem.config.js
