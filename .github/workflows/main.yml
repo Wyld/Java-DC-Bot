@@ -34,20 +34,8 @@ jobs:
           KEEP_ALIVE_PORT: ${{ secrets.KEEP_ALIVE_PORT }}  # Falls benötigt
         run: |
           node index.js  # Startet den Discord-Bot (index.js)
-
-      # 5. Commit und Push Änderungen an hubs.json
-      - name: Commit and push hubs.json
-        if: always()  # Führt diesen Schritt immer aus, auch bei Fehlern
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"
-          git add hubs.json
-          git commit -m "Update hubs.json" || echo "Keine Änderungen zum Committen"
-          git push https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }} HEAD:${{ github.ref_name }}
-
-      # 6. Optional: Überprüfung der laufenden Prozesse (z. B. um sicherzustellen, dass der Bot läuft)
+      
+      # 5. Optional: Überprüfung der laufenden Prozesse (z. B. um sicherzustellen, dass der Bot läuft)
       - name: Verify running processes
         run: |
           ps aux | grep node
