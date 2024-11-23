@@ -3,9 +3,14 @@
     "1300469150107566100",
     [
       {
-        "hubChannelId": "1309953230167609455",
+        "hubChannelId": "1307688241054486528",
         "privacy": "public",
-        "limit": 2
+        "limit": 10
+      },
+      {
+        "hubChannelId": "1307688873954119731",
+        "privacy": "private",
+        "limit": 10
       }
     ]
   ]
