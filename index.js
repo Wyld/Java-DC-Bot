@@ -356,5 +356,34 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+client.on('guildMemberAdd', async (member) => {
+  console.log(`Neues Mitglied beigetreten: ${member.user.tag} (${member.id})`);
+  console.log(`Server: ${member.guild.name} (${member.guild.id})`);
+
+  // Liste der Rollen-IDs
+  const roleIds = [
+    '1307665315295006730',
+    '1309983424349474906', // Rolle 1
+    '1309983887580987464', // Rolle 2
+    '1309984196110061628', // Rolle 3
+  ];
+
+  try {
+    for (const roleId of roleIds) {
+      const role = member.guild.roles.cache.get(roleId);
+
+      if (!role) {
+        console.error(`Die Rolle mit der ID ${roleId} existiert nicht im Server ${member.guild.name}.`);
+        continue; // Fahre mit der nächsten Rolle fort
+      }
+
+      await member.roles.add(role);
+      console.log(`Rolle "${role.name}" erfolgreich an ${member.user.tag} vergeben.`);
+    }
+  } catch (error) {
+    console.error(`Fehler beim Hinzufügen der Rollen für ${member.user.tag}:`, error);
+  }
+});
+
 
 client.login(token);
