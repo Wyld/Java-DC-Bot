@@ -22,6 +22,10 @@ jobs:
       run: |
         npm install
 
+    - name: Install PM2 globally
+      run: |
+        npm install pm2 -g
+
     - name: Set environment variables
       run: |
         echo "PORT=${{ secrets.PORT }}" >> $GITHUB_ENV
