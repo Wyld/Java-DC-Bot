@@ -34,41 +34,8 @@ jobs:
           KEEP_ALIVE_PORT: ${{ secrets.KEEP_ALIVE_PORT }}  # Falls benötigt
         run: |
           node index.js  # Startet den Discord-Bot (index.js)
-
-      # 4.1. Sicherstellen, dass keine anderen Git-Prozesse laufen
-      - name: Kill Git processes
-        run: |
-          GIT_PROCESSES=$(ps aux | grep git | grep -v grep | wc -l)
-          if [ "$GIT_PROCESSES" -gt 0 ]; then
-            echo "Laufende Git-Prozesse gefunden. Beende sie..."
-            pkill -9 git || echo "Keine Git-Prozesse zu beenden."
-
-      # 4.2. Git-Status prüfen (Debugging)
-      - name: Check Git status
-        run: |
-          git status
-          ls -la .git
-
-      # 5. Commit und Push Änderungen an hubs.json
-      - name: Commit and push hubs.json
-        if: always()  # Führt diesen Schritt immer aus, auch bei Fehlern
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          # Lock-Datei entfernen, falls vorhanden
-          if [ -f .git/index.lock ]; then
-            echo "Lock-Datei gefunden. Entferne sie..."
-            rm -f .git/index.lock
-          fi
-
-          # Git-Konfiguration und Operationen
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"
-          git add hubs.json
-          git commit -m "Update hubs.json" || echo "Keine Änderungen zum Committen"
-          git push https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }} HEAD:${{ github.ref_name }}
-
-      # 6. Optional: Überprüfung der laufenden Prozesse (z. B. um sicherzustellen, dass der Bot läuft)
+      
+      # 5. Optional: Überprüfung der laufenden Prozesse (z. B. um sicherzustellen, dass der Bot läuft)
       - name: Verify running processes
         run: |
           ps aux | grep node
