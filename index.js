@@ -13,6 +13,7 @@ const {
 const fs = require('fs');
 const setDiscordPresence = require('./discord_presence'); // Präsenz setzen
 const hubs = new Map(); // Speichert die Hub-Einstellungen
+const { exec } = require('child_process');
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
@@ -25,9 +26,33 @@ const client = new Client({
   ],
 });
 
-// Helper: Speichern der Hubs
 const saveHubs = () => {
+  // Speichern der Hubs in hubs.json
   fs.writeFileSync('hubs.json', JSON.stringify(Array.from(hubs.entries()), null, 2));
+
+  // Git-Kommandos ausführen, um Änderungen zu committen und zu pushen
+  exec('git config --global user.name "GitHub Actions Bot"');
+  exec('git config --global user.email "actions@github.com"');
+  exec('git add hubs.json');
+  exec('git commit -m "Update hubs.json"', (err, stdout, stderr) => {
+    if (err) {
+      console.error('Fehler beim Commit:', stderr);
+      return;
+    }
+    console.log('Änderungen committet:', stdout);
+
+    // Änderungen pushen
+    exec(
+        `git push https://x-access-token:${process.env.GH_TOKEN}@github.com/<USER>/<REPO>.git HEAD:main`,
+        (pushErr, pushStdout, pushStderr) => {
+          if (pushErr) {
+            console.error('Fehler beim Pushen:', pushStderr);
+            return;
+          }
+          console.log('Änderungen erfolgreich gepusht:', pushStdout);
+        }
+    );
+  });
 };
 
 // Hubs laden
