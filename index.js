@@ -1,6 +1,7 @@
 require('dotenv').config();
 const {
   Client,
+  EmbedBuilder,
   GatewayIntentBits,
   REST,
   Routes,
@@ -382,6 +383,37 @@ client.on('guildMemberAdd', async (member) => {
     }
   } catch (error) {
     console.error(`Fehler beim Hinzufügen der Rollen für ${member.user.tag}:`, error);
+  }
+});
+
+
+client.on('guildMemberAdd', (member) => {
+  const welcomeEmbed = new EmbedBuilder()
+      .setColor('#00FF00')
+      .setTitle('Willkommen!')
+      .setDescription(`Hallo ${member.user}, willkommen auf dem Server **${member.guild.name}**! 🎉`)
+      .setThumbnail(member.user.displayAvatarURL({ format: 'png', size: 1024 }))
+      .setTimestamp()
+      .setFooter({ text: `Du bist Mitglied Nr. ${member.guild.memberCount}` });
+
+  const channel = member.guild.systemChannel || member.guild.channels.cache.get('DEIN_CHANNEL_ID');
+  if (channel) {
+    channel.send({ embeds: [welcomeEmbed] });
+  }
+});
+
+client.on('guildMemberRemove', (member) => {
+  const goodbyeEmbed = new EmbedBuilder()
+      .setColor('#FF0000')
+      .setTitle('Auf Wiedersehen!')
+      .setDescription(`${member.user} hat den Server **${member.guild.name}** verlassen. 😢`)
+      .setThumbnail(member.user.displayAvatarURL({ format: 'png', size: 1024 }))
+      .setTimestamp()
+      .setFooter({ text: `Der Server hat jetzt ${member.guild.memberCount} Mitglieder.` });
+
+  const channel = member.guild.systemChannel || member.guild.channels.cache.get('1300469150614814740');
+  if (channel) {
+    channel.send({ embeds: [goodbyeEmbed] });
   }
 });
 
