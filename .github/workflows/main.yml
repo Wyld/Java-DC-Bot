@@ -35,12 +35,32 @@ jobs:
         run: |
           node index.js  # Startet den Discord-Bot (index.js)
 
+      # 4.1. Sicherstellen, dass keine anderen Git-Prozesse laufen
+      - name: Check for Git processes
+        run: |
+          GIT_PROCESSES=$(ps aux | grep git | grep -v grep | wc -l)
+          if [ "$GIT_PROCESSES" -gt 0 ]; then
+            echo "Andere Git-Prozesse erkannt. Warten auf deren Abschluss..."
+            sleep 10
+          fi
+
+      # 4.2. Repository bereinigen
+      - name: Clean up repository
+        run: |
+          git reset --hard
+          git clean -fd
+
       # 5. Commit und Push Änderungen an hubs.json
       - name: Commit and push hubs.json
         if: always()  # Führt diesen Schritt immer aus, auch bei Fehlern
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
+          # Lock-Datei entfernen, falls vorhanden
+          if [ -f .git/index.lock ]; then
+            echo "Lock-Datei gefunden. Entferne sie..."
+            rm .git/index.lock
+          fi
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
           git add hubs.json
