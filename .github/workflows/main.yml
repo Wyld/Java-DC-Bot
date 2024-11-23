@@ -1,4 +1,4 @@
-name: Restart JavaScript Bot
+name: Restart JavaScript Discord Bot
 
 on:
   schedule:
@@ -24,21 +24,20 @@ jobs:
       - name: Install dependencies
         run: |
           npm install
-    
-      # 6. Discord-Bot starten
-      - name: Start Discord Bot
+
+  
+      # 5. Discord Bot ausführen
+      - name: Run Discord Bot
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
           KEEP_ALIVE_PORT: ${{ secrets.KEEP_ALIVE_PORT }}
         run: |
-          node index.js &
-          echo "Discord Bot gestartet."
+          node index.js  # Startet den Discord-Bot (index.js)
 
-      # 7. Optional: Überprüfung der laufenden Prozesse (optional für Debugging)
+      # 6. Optional: Überprüfung der laufenden Prozesse (optional für Debugging)
       - name: Verify running processes
         run: |
           ps aux | grep node
           echo "Prozesse überprüft."
-
