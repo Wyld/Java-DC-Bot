@@ -21,6 +21,8 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
   ],
 });
@@ -232,6 +234,30 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     console.error('Fehler beim Erstellen des temporären Kanals:', error);
   }
 });
+
+// Kanal-ID, auf die der Bot reagieren soll
+const TARGET_CHANNEL_ID = '1308157336182980748';
+
+client.once('ready', () => {
+  console.log(`Bot ist online! Eingeloggt als ${client.user.tag}`);
+});
+
+client.on('messageCreate', async (message) => {
+  // Stelle sicher, dass die Nachricht nicht vom Bot selbst ist
+  if (message.author.bot) return;
+
+  // Reagiere nur in dem spezifizierten Kanal
+  if (message.channel.id === TARGET_CHANNEL_ID) {
+    try {
+      // Reagiere mit 👍 und 👎
+      await message.react('👍');
+      await message.react('👎');
+    } catch (error) {
+      console.error('Fehler beim Hinzufügen von Reaktionen:', error);
+    }
+  }
+});
+
 
 
 client.login(token);
