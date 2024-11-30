@@ -25,7 +25,7 @@ jobs:
         run: |
           npm ci  # Verwendet npm ci für eine schnellere und deterministische Installation
 
-      # 4. PM2 installieren (falls noch nicht vorhanden)
+      # 4. PM2 installieren
       - name: Install PM2
         run: |
           npm install pm2 -g
@@ -46,10 +46,12 @@ jobs:
             pm2 start index.js --name discord-bot --update-env  # Neustart des Bots bei Bedarf
           fi
 
-          # PM2 Konfiguration für den Autostart bei System-Neustart
-          pm2 startup ubuntu -u $USER --hp /home/$USER
+          # PM2 speichert den aktuellen Zustand
           pm2 save
 
-      # 6. Workflow explizit beenden, ohne den Runner zu blockieren
-      - name: Workflow beendet
-        run: echo "Bot läuft im Hintergrund, Workflow abgeschlossen."
+      # 6. Workflow explizit am Leben halten
+      - name: Keep PM2 alive
+        run: |
+          while true; do
+            sleep 1d  # Leerlaufzeit, die verhindert, dass der Workflow beendet wird
+          done
