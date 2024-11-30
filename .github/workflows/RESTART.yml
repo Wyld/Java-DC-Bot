@@ -38,7 +38,6 @@ jobs:
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
           KEEP_ALIVE_PORT: ${{ secrets.KEEP_ALIVE_PORT }}
         run: |
-          # Überprüfen, ob der Bot bereits läuft
           if pm2 list | grep "discord-bot"; then
             echo "Bot läuft bereits, wird neu gestartet."
             pm2 reload discord-bot
@@ -46,10 +45,8 @@ jobs:
             echo "Bot läuft nicht, wird gestartet."
             pm2 start index.js --name discord-bot --update-env
           fi
-          # Konfiguration speichern
           pm2 save
 
-      # 6. Überprüfung der laufenden Prozesse
-      - name: Verify running processes
-        run: |
-          pm2 list
+      # 6. Workflow aktiv halten
+      - name: Keep Runner Alive
+        run: sleep 99999999
