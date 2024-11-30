@@ -34,23 +34,20 @@ jobs:
       - name: Check if bot is running
         id: check-bot
         run: |
-          pm2 list | grep "discord-bot" || exit 1
-        continue-on-error: true
+          pm2 list | grep "discord-bot" || echo "not running"
 
       # 6. Bot starten oder neu starten
       - name: Start or Restart Discord Bot
-        if: steps.check-bot.outcome == 'failure'
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
-          pm2 start index.js --name discord-bot --update-env
-          pm2 save
-      - name: Restart Bot (if running)
-        if: steps.check-bot.outcome == 'success'
-        run: |
-          pm2 restart discord-bot
+          if pm2 list | grep "discord-bot"; then
+            pm2 restart discord-bot
+          else
+            pm2 start index.js --name discord-bot --update-env
+          fi
           pm2 save
 
       # 7. Optional: Überprüfung der laufenden Prozesse
