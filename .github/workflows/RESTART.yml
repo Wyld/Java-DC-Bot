@@ -1,4 +1,4 @@
-name: Restart Discord Bot
+name: Restart JavaScript Discord Bot
 
 on:
   schedule:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Code auschecken
+      # 1. Code aus dem Repository auschecken
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -18,7 +18,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '18'  # Wähle die benötigte Node.js-Version
 
       # 3. Abhängigkeiten installieren
       - name: Install dependencies
@@ -30,16 +30,26 @@ jobs:
         run: |
           npm install pm2 -g
 
-      # 5. Bot starten oder neu starten
-      - name: Start or Restart Bot with PM2
+      # 5. Discord Bot mit PM2 starten oder neu starten
+      - name: Start or Restart Discord Bot
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          KEEP_ALIVE_PORT: ${{ secrets.KEEP_ALIVE_PORT }}
         run: |
+          # Überprüfen, ob der Bot bereits läuft
           if pm2 list | grep "discord-bot"; then
-            pm2 restart discord-bot
+            echo "Bot läuft bereits, wird neu gestartet."
+            pm2 reload discord-bot
           else
+            echo "Bot läuft nicht, wird gestartet."
             pm2 start index.js --name discord-bot --update-env
           fi
+          # Konfiguration speichern
           pm2 save
+
+      # 6. Überprüfung der laufenden Prozesse
+      - name: Verify running processes
+        run: |
+          pm2 list
