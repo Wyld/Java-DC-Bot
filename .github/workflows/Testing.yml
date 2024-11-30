@@ -46,4 +46,7 @@ jobs:
             pm2 start index.js --name discord-bot --update-env  # Neustart des Bots bei Bedarf
           fi
           pm2 save
-
+          
+      # 6. Den Workflow erfolgreich beenden (während der Bot weiterläuft)
+      - name: Workflow beendet
+        run: echo "Bot läuft im Hintergrund, Workflow abgeschlossen."
