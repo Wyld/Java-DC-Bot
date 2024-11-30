@@ -30,13 +30,7 @@ jobs:
         run: |
           npm install pm2 -g
 
-      # 5. Prüfen, ob der Bot läuft
-      - name: Check if bot is running
-        id: check-bot
-        run: |
-          pm2 list | grep "discord-bot" || echo "not running"
-
-      # 6. Bot starten oder neu starten
+      # 5. Bot starten oder neu starten
       - name: Start or Restart Discord Bot
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
@@ -50,7 +44,7 @@ jobs:
           fi
           pm2 save
 
-      # 7. Optional: Überprüfung der laufenden Prozesse
+      # 6. Überprüfung, ob der Bot läuft
       - name: Verify running processes
         run: |
           pm2 list
