@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '18'  # Wähle die benötigte Node.js-Version
 
-      # 3. Abhängigkeiten installieren, nur wenn package.json sich geändert hat
+      # 3. Abhängigkeiten installieren
       - name: Install dependencies
         run: |
           npm ci  # Verwendet npm ci für eine schnellere und deterministische Installation
@@ -45,8 +45,11 @@ jobs:
             echo "Bot läuft nicht, wird gestartet."
             pm2 start index.js --name discord-bot --update-env  # Neustart des Bots bei Bedarf
           fi
+
+          # PM2 Konfiguration für den Autostart bei System-Neustart
+          pm2 startup ubuntu -u $USER --hp /home/$USER
           pm2 save
-          
-      # 6. Den Workflow erfolgreich beenden (während der Bot weiterläuft)
+
+      # 6. Workflow explizit beenden, ohne den Runner zu blockieren
       - name: Workflow beendet
         run: echo "Bot läuft im Hintergrund, Workflow abgeschlossen."
